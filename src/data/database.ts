@@ -1,5 +1,5 @@
 import { UserBody } from "./typeDefinitions";
+import { PrismaClient } from "@prisma/client";
 
-const users = [] as UserBody[]
-
-export default users
+export const users = [] as UserBody[]
+export const prisma = new PrismaClient()

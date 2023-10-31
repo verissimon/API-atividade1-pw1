@@ -1,5 +1,5 @@
 import { Technology } from "../data/typeDefinitions";
-import users from "../data/database";
+import { users } from "../data/database";
 import { Request, Response } from "express";
 import { v4 as uuid } from "uuid";
 import { BadRequestError } from "../helpers/apiErrors";

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import users from "../data/database"
+import { users, prisma} from "../data/database"
 import { NotFoundError } from "../helpers/apiErrors";
 
 export const checkTechIdExists = (
