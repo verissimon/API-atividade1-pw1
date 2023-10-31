@@ -1,85 +1,119 @@
 import { Technology } from "../data/typeDefinitions";
-import { users } from "../data/database";
+import { users, prisma } from "../data/database";
 import { Request, Response } from "express";
 import { v4 as uuid } from "uuid";
 import { BadRequestError } from "../helpers/apiErrors";
+import { Prisma } from "@prisma/client";
 
-const listUserTechs = (req: Request, res: Response) => {
-    const { username } = req.headers;
-    const user = users.find( uname => 
-        uname.username === username as string
-    )
-    return res.json(user?.technologies);
+const listUserTechs = async (req: Request, res: Response) => {
+    const { username } = req.headers
+    try {
+        const user = await prisma.user.findFirst({
+            where: { username: username as string }
+        })
+
+        const tech = await prisma.technology.findMany({
+            where: { studentId: user?.id }
+        })
+
+        return res.json(tech)
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "An error occurred" })
+    }
 }
 
-const createUserTech = (req: Request, res: Response) => {
+const createUserTech = async (req: Request, res: Response) => {
     const { username } = req.headers
     const { title, deadline } = req.body
-    const user = users.find( uname => 
-        uname.username === username as string)
-        
-    const techExists = user?.technologies.find(
-        tech => tech.title === title)
-    if(techExists)
-        throw new BadRequestError("Technology already exists for this user")
 
-    if(!title || !deadline){
-        throw new BadRequestError("Title and deadline are required")
+    try {
+        if (!title || !deadline) {
+            return res.status(400).json({ message: "Title and deadline are required" })
+        }
+        const user = await prisma.user.findFirst({
+            where: { username: username as string }
+        })
+
+        const techExists = await prisma.technology.findFirst({
+            where: { studentId: user?.id, title: title }
+        })
+
+        if (techExists) {
+            return res.status(400).json({ message: "Technology already exists" })
+        }
+
+        const newTech = await prisma.technology.create({
+            data: {
+                title,
+                deadline: new Date(deadline),
+                studentId: user?.id
+            }
+        })
+        return res.status(201).json(newTech)
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "An error occurred" })
     }
 
-    const technology: Technology = {
-        id: uuid(),
-        title: title,
-        studied: false,
-        deadline: new Date(deadline),
-        created_at: new Date(),
-    }
-
-    user?.technologies.push(technology)
-    return res.status(201).json(technology)
 }
 
-const updateTitleDeadline = (req: Request, res: Response) => {
-    const { username } = req.headers
+const updateTitleDeadline = async (req: Request, res: Response) => {
     const { id } = req.params
     const { title, deadline } = req.body
+
     if (!title || !deadline) {
-        throw new BadRequestError("Title or deadline are required")
+        return res.status(400).json({ message: "Title and deadline are required" })
     }
-    const user = users.find( uname => 
-        uname.username === username as string)
- 
-    user?.technologies.map((tech) => {
-    if (tech.id === id) {
-      tech.title = title
-      tech.deadline = deadline
+
+    try {
+        const updatedTechnology = await prisma.technology.update({
+            where: { id: id as string },
+            data: { title, deadline: new Date(deadline) }
+        })
+        return res.json({ message: "Update successful", technology: updatedTechnology }) 
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "An error occurred while updating the technology" })
     }
-    return res.json({ message: "update feito com sucesso" })
-  })
 }
 
-const updateStudied = (req: Request, res: Response) => {
+const updateStudied = async (req: Request, res: Response) => {
     const { username } = req.headers
     const { id } = req.params
-    const user = users.find( uname => uname.username === username as string)
-    user?.technologies.map( tech => {
-    if (tech.id === id) 
-      tech.studied = !tech.studied
-    })
-    return res.json({ message: "update feito com sucesso" })
-}
 
-const deleteTech = (req: Request, res: Response) => {
-    const { username } = req.headers
+    try {
+        const user = await prisma.user.findFirst({
+            where: { username: username as string },
+            include: { technologies: true }
+        })
+
+        const technology = user?.technologies.find(tech => tech.id === id)
+
+        await prisma.technology.update({
+            where: { id },
+            data: { studied: !technology?.studied }
+        })
+
+        return res.json({ message: "Update successful" })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "An error occurred while updating the technology" })
+    }
+}
+const deleteTech = async (req: Request, res: Response) => {
     const { id } = req.params
-    const user = users.find( uname => uname.username === username as string)
-    const tech = user?.technologies.find(
-        tech => tech.id === id)
-    const index = user?.technologies.indexOf(tech as Technology)
-    user?.technologies.splice(index!, 1)
-    return res.json({ message: "tecnologia deletada com sucesso" })
-}
 
+    try {
+        await prisma.technology.delete({
+            where: { id },
+        })
+        return res.json({ message: "Technology deleted successfully" })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "An error occurred while deleting the technology" })
+    }
+}
 export const techController = {
     listUserTechs,
     createUserTech,

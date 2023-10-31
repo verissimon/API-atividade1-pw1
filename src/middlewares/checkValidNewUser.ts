@@ -4,7 +4,6 @@ import {users, prisma} from "../data/database"
 
 export const checkValidNewUser = async (req: Request, res: Response, next: NextFunction) => {
     const { username } = req.body as UserBody
-    //const userExists = users.some( user => user.username === username )
     const userExists = await prisma.user.findUnique({
         where: { username }
     })
