@@ -6,14 +6,18 @@ const userData: Prisma.UserCreateInput[] = [
   {
     name: 'verissmo',
     username: 'vrsm',
+    technologies: {
+      create: [
+        {
+          title: "graphQL",
+          deadline: new Date("2024"),
+        }
+      ]
+    }
   },
   {
     name: 'fabio',
     username: 'bala',
-  },
-  {
-    name: 'prisma',
-    username: 'prsm',
   },
 ]
 

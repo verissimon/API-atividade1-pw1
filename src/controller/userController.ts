@@ -1,24 +1,15 @@
-import { UserBody } from "../data/typeDefinitions";
-import { users, prisma } from "../data/database";
-import { Prisma } from "@prisma/client";
 import { Request, Response } from "express";
-import { v4 as uuid } from 'uuid'
+import { userServices } from "../services/userServices";
 
 const addUser = async (req: Request, res: Response) => {
-    const { name, username } = req.body as UserBody
+    const { name, username } = req.body
     
-    const newUser: Prisma.UserCreateInput = {
-        name,
-        username,
-    }
-    await prisma.user.create({
-        data: newUser
-    })
+    const newUser = await userServices.create(name, username)
     return res.status(201).json(newUser)
 }
 
 const listUsers = async (req: Request, res: Response) => {
-    const allUsers = await prisma.user.findMany({})
+    const allUsers = await userServices.findAll()
     res.status(200).json(allUsers);
 }
 

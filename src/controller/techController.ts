@@ -1,20 +1,12 @@
-import { Technology } from "../data/typeDefinitions";
-import { users, prisma } from "../data/database";
 import { Request, Response } from "express";
-import { v4 as uuid } from "uuid";
-import { BadRequestError } from "../helpers/apiErrors";
-import { Prisma } from "@prisma/client";
+import { userServices } from "../services/userServices";
+import { techServices } from "../services/techServices";
 
 const listUserTechs = async (req: Request, res: Response) => {
     const { username } = req.headers
     try {
-        const user = await prisma.user.findFirst({
-            where: { username: username as string }
-        })
-
-        const tech = await prisma.technology.findMany({
-            where: { studentId: user?.id }
-        })
+        const user = await userServices.findByUsername(username as string)
+        const tech = await techServices.findByStudentId(user?.id as string)
 
         return res.json(tech)
     } catch (error) {
@@ -31,25 +23,15 @@ const createUserTech = async (req: Request, res: Response) => {
         if (!title || !deadline) {
             return res.status(400).json({ message: "Title and deadline are required" })
         }
-        const user = await prisma.user.findFirst({
-            where: { username: username as string }
-        })
+        const user = await userServices.findByUsername(username as string)
+        const tech = await techServices.findByStudentId(user?.id as string)
 
-        const techExists = await prisma.technology.findFirst({
-            where: { studentId: user?.id, title: title }
-        })
-
+        const techExists = tech.some( tech => tech.title === title)
         if (techExists) {
             return res.status(400).json({ message: "Technology already exists" })
         }
 
-        const newTech = await prisma.technology.create({
-            data: {
-                title,
-                deadline: new Date(deadline),
-                studentId: user?.id
-            }
-        })
+        const newTech = await techServices.create(title, new Date(deadline), user?.id as string)
         return res.status(201).json(newTech)
     } catch (error) {
         console.error(error)
@@ -59,6 +41,7 @@ const createUserTech = async (req: Request, res: Response) => {
 }
 
 const updateTitleDeadline = async (req: Request, res: Response) => {
+    const { username } = req.headers
     const { id } = req.params
     const { title, deadline } = req.body
 
@@ -67,10 +50,10 @@ const updateTitleDeadline = async (req: Request, res: Response) => {
     }
 
     try {
-        const updatedTechnology = await prisma.technology.update({
-            where: { id: id as string },
-            data: { title, deadline: new Date(deadline) }
-        })
+        const tech = await techServices.findByStudentUsername(username as string, id)
+        if(!tech)
+            return res.status(400).json({ message: "non-existent Technology for this user" })
+        const updatedTechnology = await techServices.update(title, new Date(deadline), id)
         return res.json({ message: "Update successful", technology: updatedTechnology }) 
     } catch (error) {
         console.error(error)
@@ -83,18 +66,12 @@ const updateStudied = async (req: Request, res: Response) => {
     const { id } = req.params
 
     try {
-        const user = await prisma.user.findFirst({
-            where: { username: username as string },
-            include: { technologies: true }
-        })
+        const tech = await techServices.findByStudentUsername(username as string, id)
+        if(!tech)
+            return res.status(400).json({ message: "non-existent Technology for this user" })
 
-        const technology = user?.technologies.find(tech => tech.id === id)
-
-        await prisma.technology.update({
-            where: { id },
-            data: { studied: !technology?.studied }
-        })
-
+        techServices.patchStudied(tech?.id as string, true)
+    
         return res.json({ message: "Update successful" })
     } catch (error) {
         console.error(error)
@@ -103,11 +80,14 @@ const updateStudied = async (req: Request, res: Response) => {
 }
 const deleteTech = async (req: Request, res: Response) => {
     const { id } = req.params
+    const { username } = req.headers
 
     try {
-        await prisma.technology.delete({
-            where: { id },
-        })
+        const tech = await techServices.findByStudentUsername(username as string, id)
+        if(!tech)
+            return res.status(400).json({ message: "non-existent Technology for this user" })
+
+        techServices.del(id)
         return res.json({ message: "Technology deleted successfully" })
     } catch (error) {
         console.error(error)

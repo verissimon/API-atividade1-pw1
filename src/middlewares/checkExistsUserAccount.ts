@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { users, prisma} from "../data/database"
-import { NotFoundError } from "../helpers/apiErrors";
+import { userServices } from "../services/userServices";
 
 export const checkExistsUserAccount = async (
   req: Request,
@@ -10,9 +9,7 @@ export const checkExistsUserAccount = async (
   const { username } = req.headers
 
   try {
-      const userExists = await prisma.user.findUnique({
-          where: { username: username as string }
-      })
+      const userExists = await userServices.findByUsername(username as string)
 
       if (!userExists) {
           return res.status(404).json({ message: "User not found" })
