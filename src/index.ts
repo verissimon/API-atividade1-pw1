@@ -8,7 +8,7 @@ const server = express()
 server.use(express.json())
 server.use(errorMiddleware)
 
-server.use("/user", userRoutes);
+server.use("/users", userRoutes);
 server.use("/technologies", techRoutes)
 
 const port = 3001

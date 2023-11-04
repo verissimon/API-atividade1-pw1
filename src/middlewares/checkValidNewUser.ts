@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from "express"
-import { UserBody } from "../data/typeDefinitions"
-import users from "../data/database"
+import { userServices } from "../services/userServices"
 
-export const checkValidNewUser = (req: Request, res: Response, next: NextFunction) => {
-    const { username } = req.body as UserBody
-    const userExists = users.some( user => user.username === username )
+export const checkValidNewUser = async (req: Request, res: Response, next: NextFunction) => {
+    const { username } = req.body
+    const userExists = await userServices.findByUsername(username as string)
 
     if(userExists)
-        return res.status(400).json({error: 'Usuário já existe'})
+        return res.status(400).json({error: 'User already exists'})
 
     next()
 }

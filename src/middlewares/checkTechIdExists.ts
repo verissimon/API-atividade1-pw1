@@ -1,18 +1,22 @@
 import { Request, Response, NextFunction } from "express";
-import users from "../data/database"
-import { NotFoundError } from "../helpers/apiErrors";
+import { userServices } from "../services/userServices";
+import { techServices } from "../services/techServices";
 
-export const checkTechIdExists = (
+export const checkTechIdExists = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    const { username } = req.headers
     const { id } = req.params
-    const user = users.find( ubody => ubody.username === username)
-    const techExists = user?.technologies.find(
-        tech => tech.id === id)
-    if(!techExists)
-        throw new NotFoundError("technology does not exist for this user")
+
+    const tech = await techServices.findById(id as string)
+
+    if(!tech)
+        return res.status(404).json({ message: "Technology id not found" })
+
+    const user = await userServices.findById(tech?.studentId as string)
+    if(!user)
+        return res.status(404).json({ message: "User not found" })
+
     next()
 }

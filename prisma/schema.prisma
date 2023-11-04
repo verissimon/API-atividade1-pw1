@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  username     String       @unique
+  technologies Technology[]
+  @@map("users")
+}
+
+model Technology {
+  id        String   @id @default(uuid())
+  title     String
+  studied   Boolean  @default(false)
+  deadline  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  studentId String?
+  student   User?    @relation(fields: [studentId], references: [id])
+  @@map("technologies")
+}
